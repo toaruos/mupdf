@@ -134,7 +134,7 @@
 
 #ifndef MEMENTO_H
 
-#include <memory.h>
+#include <string.h>
 
 #define MEMENTO_H
 
