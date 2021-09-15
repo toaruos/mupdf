@@ -9,6 +9,12 @@ GEN := generated
 
 default: all
 
+
+TARGET=x86_64-pc-toaru
+CC=${TARGET}-gcc
+LD=${TARGET}-ld
+AR=${TARGET}-ar
+
 # Do not specify CFLAGS or LIBS on the make invocation line - specify
 # XCFLAGS or XLIBS instead. Make ignores any lines in the makefile that
 # set a variable that was set on the command line.
@@ -64,8 +70,6 @@ $(OUT)/%.o : xps/%.c $(MUXPS_HDR) | $(OUT)
 	$(CC_CMD)
 $(OUT)/%.o : cbz/%.c $(MUCBZ_HDR) | $(OUT)
 	$(CC_CMD)
-$(OUT)/%.o : apps/%.c fitz/fitz.h pdf/mupdf.h xps/muxps.h cbz/mucbz.h | $(OUT)
-	$(CC_CMD)
 $(OUT)/%.o : scripts/%.c | $(OUT)
 	$(CC_CMD)
 
@@ -90,8 +94,8 @@ libs: $(FITZ_LIB) $(THIRD_LIBS)
 
 # --- Generated CMAP and FONT files ---
 
-CMAPDUMP := $(OUT)/cmapdump
-FONTDUMP := $(OUT)/fontdump
+CMAPDUMP = cmapdump
+FONTDUMP = fontdump
 
 CMAP_CNS_SRC := $(wildcard cmaps/cns/*)
 CMAP_GB_SRC := $(wildcard cmaps/gb/*)
@@ -102,28 +106,29 @@ FONT_DROID_SRC := fonts/droid/DroidSans.ttf fonts/droid/DroidSansMono.ttf
 FONT_CJK_SRC := fonts/droid/DroidSansFallback.ttf
 
 $(GEN)/cmap_cns.h : $(CMAP_CNS_SRC)
-	$(QUIET_GEN) ./$(CMAPDUMP) $@ $(CMAP_CNS_SRC)
+	$(QUIET_GEN) $(CMAPDUMP) $@ $(CMAP_CNS_SRC)
 $(GEN)/cmap_gb.h : $(CMAP_GB_SRC)
-	$(QUIET_GEN) ./$(CMAPDUMP) $@ $(CMAP_GB_SRC)
+	$(QUIET_GEN) $(CMAPDUMP) $@ $(CMAP_GB_SRC)
 $(GEN)/cmap_japan.h : $(CMAP_JAPAN_SRC)
-	$(QUIET_GEN) ./$(CMAPDUMP) $@ $(CMAP_JAPAN_SRC)
+	$(QUIET_GEN) $(CMAPDUMP) $@ $(CMAP_JAPAN_SRC)
 $(GEN)/cmap_korea.h : $(CMAP_KOREA_SRC)
-	$(QUIET_GEN) ./$(CMAPDUMP) $@ $(CMAP_KOREA_SRC)
+	$(QUIET_GEN) $(CMAPDUMP) $@ $(CMAP_KOREA_SRC)
 
 $(GEN)/font_base14.h : $(FONT_BASE14_SRC)
-	$(QUIET_GEN) ./$(FONTDUMP) $@ $(FONT_BASE14_SRC)
+	$(QUIET_GEN) $(FONTDUMP) $@ $(FONT_BASE14_SRC)
 $(GEN)/font_droid.h : $(FONT_DROID_SRC)
-	$(QUIET_GEN) ./$(FONTDUMP) $@ $(FONT_DROID_SRC)
+	$(QUIET_GEN) $(FONTDUMP) $@ $(FONT_DROID_SRC)
 $(GEN)/font_cjk.h : $(FONT_CJK_SRC)
-	$(QUIET_GEN) ./$(FONTDUMP) $@ $(FONT_CJK_SRC)
+	$(QUIET_GEN) $(FONTDUMP) $@ $(FONT_CJK_SRC)
 
 CMAP_HDR := $(addprefix $(GEN)/, cmap_cns.h cmap_gb.h cmap_japan.h cmap_korea.h)
 FONT_HDR := $(GEN)/font_base14.h $(GEN)/font_droid.h $(GEN)/font_cjk.h
 
-ifeq "$(CROSSCOMPILE)" ""
-$(CMAP_HDR) : $(CMAPDUMP) | $(GEN)
-$(FONT_HDR) : $(FONTDUMP) | $(GEN)
-endif
+
+#ifeq "$(CROSSCOMPILE)" ""
+#$(CMAP_HDR) : $(CMAPDUMP) | $(GEN)
+#$(FONT_HDR) : $(FONTDUMP) | $(GEN)
+#endif
 
 generate: $(CMAP_HDR) $(FONT_HDR)
 
@@ -131,34 +136,9 @@ $(OUT)/pdf_cmap_table.o : $(CMAP_HDR)
 $(OUT)/pdf_fontfile.o : $(FONT_HDR)
 $(OUT)/cmapdump.o : pdf/pdf_cmap.c pdf/pdf_cmap_parse.c
 
-# --- Tools and Apps ---
-
-MUDRAW := $(addprefix $(OUT)/, mudraw)
-$(MUDRAW) : $(FITZ_LIB) $(THIRD_LIBS)
-
-MUBUSY := $(addprefix $(OUT)/, mubusy)
-$(MUBUSY) : $(addprefix $(OUT)/, mupdfclean.o mupdfextract.o mupdfinfo.o mupdfposter.o mupdfshow.o) $(FITZ_LIB) $(THIRD_LIBS)
-
-ifeq "$(NOX11)" ""
-MUVIEW := $(OUT)/mupdf
-$(MUVIEW) : $(FITZ_LIB) $(THIRD_LIBS)
-$(MUVIEW) : $(addprefix $(OUT)/, x11_main.o x11_image.o pdfapp.o)
-	$(LINK_CMD) $(X11_LIBS)
-endif
-
-# --- Format man pages ---
-
-%.txt: %.1
-	nroff -man $< | col -b | expand > $@
-
-MAN_FILES := $(wildcard apps/man/*.1)
-TXT_FILES := $(MAN_FILES:%.1=%.txt)
-
-catman: $(TXT_FILES)
-
 # --- Install ---
 
-prefix ?= /usr/local
+prefix := /home/klange/Projects/osdev-strawberry/toolchain/local/$(TARGET)
 bindir ?= $(prefix)/bin
 libdir ?= $(prefix)/lib
 incdir ?= $(prefix)/include
@@ -168,8 +148,6 @@ install: $(FITZ_LIB) $(MUVIEW) $(MUDRAW) $(MUBUSY)
 	install -d $(bindir) $(libdir) $(incdir) $(mandir)/man1
 	install $(FITZ_LIB) $(libdir)
 	install fitz/memento.h fitz/fitz.h pdf/mupdf.h xps/muxps.h cbz/mucbz.h $(incdir)
-	install $(MUVIEW) $(MUDRAW) $(MUBUSY) $(bindir)
-	install $(wildcard apps/man/*.1) $(mandir)/man1
 
 # --- Clean and Default ---
 
