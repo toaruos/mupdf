@@ -362,6 +362,18 @@ static void _menu_action_about(struct MenuEntry * entry) {
 	redraw_window();
 }
 
+static void previous_page(void) {
+	current_page--;
+	if (current_page == 0) current_page = 1;
+	redraw_window();
+}
+
+static void next_page(void) {
+	current_page++;
+	if (current_page > end_page) current_page = end_page;
+	redraw_window();
+}
+
 int main(int argc, char **argv) {
 	yctx = yutani_init();
 
@@ -430,15 +442,11 @@ int main(int argc, char **argv) {
 									break;
 								case KEY_ARROW_LEFT:
 								case 'a':
-									current_page--;
-									if (current_page == 0) current_page = 1;
-									redraw_window();
+									previous_page();
 									break;
 								case KEY_ARROW_RIGHT:
 								case 's':
-									current_page++;
-									if (current_page > end_page) current_page = end_page;
-									redraw_window();
+									next_page();
 									break;
 								case KEY_F12:
 									toggle_decorations();
@@ -449,6 +457,7 @@ int main(int argc, char **argv) {
 						}
 					}
 					break;
+				case YUTANI_MSG_WINDOW_CLOSE:
 				case YUTANI_MSG_SESSION_END:
 					yutani_close(yctx, window);
 					exit(0);
@@ -489,6 +498,13 @@ int main(int argc, char **argv) {
 									break;
 							}
 							menu_bar_mouse_event(yctx, window, &menu_bar, me, me->new_x, me->new_y);
+
+							/* Use scroll to switch pages */
+							if (me->buttons & YUTANI_MOUSE_SCROLL_UP) {
+								previous_page();
+							} else if (me->buttons & YUTANI_MOUSE_SCROLL_DOWN) {
+								next_page();
+							}
 						}
 					}
 					break;
