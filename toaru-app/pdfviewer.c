@@ -287,15 +287,8 @@ static void resize_finish(int w, int h) {
 	yutani_window_resize_accept(yctx, window, w, h);
 
 	reinit_graphics_yutani(gfx_ctx, window);
-	draw_fill(gfx_ctx, rgb(0,0,0));
 
-	if (current_doc) {
-		/* redraw the page */
-		draw_decors(current_page, current_epage);
-		draw_menu();
-		drawpage(current_ctx, current_doc, current_page);
-	}
-
+	redraw_window();
 	yutani_window_resize_done(yctx, window);
 	yutani_flip(yctx, window);
 }
@@ -408,7 +401,6 @@ int main(int argc, char **argv) {
 	yutani_window_advertise_icon(yctx, window, APPLICATION_TITLE, "mupdf");
 
 	gfx_ctx = init_graphics_yutani(window);
-	draw_fill(gfx_ctx,rgb(0,0,0));
 	render_decorations(window, gfx_ctx, APPLICATION_TITLE " - Loading...");
 
 	/* Configure Fitz */
