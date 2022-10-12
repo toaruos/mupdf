@@ -78,11 +78,17 @@ void draw_decors(int page, int epage) {
 }
 
 static void draw_menu(void) {
-	struct decor_bounds bounds;
-	decor_get_bounds(window, &bounds);
-	menu_bar.x = bounds.left_width;
-	menu_bar.y = bounds.top_height;
-	menu_bar.width = gfx_ctx->width - bounds.width;
+	if (toggle_decors) {
+		struct decor_bounds bounds;
+		decor_get_bounds(window, &bounds);
+		menu_bar.x = bounds.left_width;
+		menu_bar.y = bounds.top_height;
+		menu_bar.width = gfx_ctx->width - bounds.width;
+	} else {
+		menu_bar.x = 0;
+		menu_bar.y = 0;
+		menu_bar.width = gfx_ctx->width;
+	}
 	menu_bar.window = window;
 	menu_bar_render(&menu_bar, gfx_ctx);
 }
@@ -250,13 +256,13 @@ static void fitz_load_file(char * filename) {
 }
 
 static void redraw_window(void) {
+	draw_fill(gfx_ctx, rgb(127,127,127));
 	if (current_doc) {
 		drawpage(current_ctx, current_doc, current_page);
-	} else {
-		draw_fill(gfx_ctx, rgb(127,127,127));
 	}
 	draw_decors(current_page, end_page);
 	draw_menu();
+	flip(gfx_ctx);
 	yutani_flip(yctx, window);
 }
 
@@ -280,6 +286,7 @@ void toggle_decorations(void) {
 	toggle_decors = !toggle_decors;
 	draw_fill(gfx_ctx, rgb(0,0,0));
 	recalc_size(window->width, window->height);
+	redraw_window();
 }
 
 static void resize_finish(int w, int h) {
@@ -400,7 +407,7 @@ int main(int argc, char **argv) {
 	yutani_window_move(yctx, window, 50, 50);
 	yutani_window_advertise_icon(yctx, window, APPLICATION_TITLE, "mupdf");
 
-	gfx_ctx = init_graphics_yutani(window);
+	gfx_ctx = init_graphics_yutani_double_buffer(window);
 	render_decorations(window, gfx_ctx, APPLICATION_TITLE " - Loading...");
 
 	/* Configure Fitz */
@@ -476,19 +483,22 @@ int main(int argc, char **argv) {
 					{
 						struct yutani_msg_window_mouse_event * me = (void*)m->data;
 						if (me->wid == window->wid) {
-							int result = decor_handle_event(yctx, m);
-							switch (result) {
-								case DECOR_CLOSE:
-									exit(0);
-									break;
-								case DECOR_RIGHT:
-									/* right click in decoration, show appropriate menu */
-									decor_show_default_menu(window, window->x + me->new_x, window->y + me->new_y);
-									break;
-								default:
-									/* Other actions */
-									break;
+							if (toggle_decors) {
+								int result = decor_handle_event(yctx, m);
+								switch (result) {
+									case DECOR_CLOSE:
+										exit(0);
+										break;
+									case DECOR_RIGHT:
+										/* right click in decoration, show appropriate menu */
+										decor_show_default_menu(window, window->x + me->new_x, window->y + me->new_y);
+										break;
+									default:
+										/* Other actions */
+										break;
+								}
 							}
+
 							menu_bar_mouse_event(yctx, window, &menu_bar, me, me->new_x, me->new_y);
 
 							/* Use scroll to switch pages */
